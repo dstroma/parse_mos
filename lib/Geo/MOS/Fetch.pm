@@ -23,12 +23,22 @@ sub fetch {
     die "Invalid location";
   }
   
-  my $resp = $ua->get('http://www.nws.noaa.gov/cgi-bin/mos/getmav.pl?sta=' . $location);
+  my $resp = $ua->get('https://www.weather.gov/source/mdl/MOS/GFSMAV.txt');
+
+  my %forecasts = ();
 
   if ($resp->is_success) {
     my $page     = $resp->decoded_content;
-    my ($report) = $page =~ m#<PRE>\n(.+)\n</PRE>#s;
-    return $report;
+    my $cur_sta;
+    foreach my $line (split "\n", $page) {
+      if ($line =~ m#^ (\w\w\w\w)   GFS MOS GUIDANCE#) {
+        $cur_sta = $1;
+      }
+      $forecasts{$cur_sta} .= $line . "\n";
+    }
+
+    #die $forecasts{'KFYJ'};
+    return $forecasts{$location};   
   }
 
   die "Failed response. " . $resp->as_string . "\n";

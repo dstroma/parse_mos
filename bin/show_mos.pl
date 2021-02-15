@@ -13,7 +13,7 @@ my $fetcher  = Geo::MOS::Fetch->new(location => $loc);
 my $forecast = $fetcher->fetch;
 
 my $parsed  = Geo::MOS::Parse->new(plaintext => $forecast);
-my $report  = $parsed->report(); # timezone => 'America/New_York');
+my $report  = $parsed->report(timezone => 'America/New_York');
 
 print $report;
 
