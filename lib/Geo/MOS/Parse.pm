@@ -3,7 +3,6 @@ package Geo::MOS::Parse;
 use warnings;
 use strict;
 use DateTime;
-use feature 'say';
 
 =sample
 

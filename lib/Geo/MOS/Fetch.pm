@@ -37,7 +37,6 @@ sub fetch {
       $forecasts{$cur_sta} .= $line . "\n";
     }
 
-    #die $forecasts{'KFYJ'};
     return $forecasts{$location};   
   }
 
