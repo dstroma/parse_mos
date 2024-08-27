@@ -97,15 +97,18 @@ sub _parse {
 
   my @rows = split '\n', $self->{plaintext};
   #$self->{'_plaintext::rows'} = @rows;
-  my $header = $rows[0];
 
+  # Parse main header
+  my $header = $rows[0];
   my ($loc, $label, $month, $day, $year, $hour, $minute) = $header =~ m#(\w\w\w\w)\s+(GFS MOS GUIDANCE)\s+(\d{1,2})/(\d\d)/(\d\d\d\d)\s+(\d\d)(\d\d) UTC#;
+  die 'Invalid header' unless $loc and $label and $month and $day and $year;
   $self->{location} = $loc;
   $self->{forecast_type} = $label;
   $self->{generation_time} = DateTime->new(
     year => $year, month => $month, day => $day, hour => $hour, minute => $minute, second => 0, time_zone => 'UTC'
   );
 
+  # Parse hour columns
   my $hour_header = $rows[2];
   ($hour_header) = $hour_header =~ m/HR\s+(.+)/;
   my (@hours) = split /\s+/, $hour_header;
@@ -137,16 +140,19 @@ sub _parse {
   # Parse rows 4-21 except 13 and 14
   for (my $i = 4; $i <= 21; $i++) {
     my $row = $rows[$i];                   # Get i'th row
+    next unless defined $row;              # Skip blank rows
+    next unless length $row;               # Skip empty rows
     $row =~ s/^\s+//;                      # Remove leading whitespace
     my $label = substr($row, 0, 3);        # Label is first 3 chars of row
-    $row = substr($row, 5);                # Remove first column
+    $row = substr($row, 4);                # Remove label column
+
     for (my $j = 0; $j <= 20; $j++) {      # Loop through 20 columns
       my $val;
       if ($label eq 'T06' or $label eq 'T12') {    # Double-width columns
         next unless $j >= 2 and $j % 2 == 0;
         $val = substr($row, $j*3 - 3, 5);          # Extract 5-character column
       } else {
-        $val = substr($row, ($j*3)-1, 3);              # Extract 3-character column
+        $val = substr($row, $j*3, 3);              # Extract 3-character column
       }
       $val =~ s/^\s+//;                    # Remove leading whitespace
       $self->{columns}->[$j]->{$label} = $val if length $val;
@@ -252,13 +258,17 @@ sub report {
       $vis .= ' in ' . lc $OBV_key{$col->{OBV}};
     }
 
-    my $tstorm_desc;
-    if (exists $col->{T06}) {
-      my ($tstorm, $sev_tstorm) = map { int $_ } split('/', $col->{T06});
-      $tstorm_desc = $tstorm . '% chance';
-      $tstorm_desc .= ' (' . $sev_tstorm . '% of which may be severe) ' if $sev_tstorm > 0;
-      $tstorm_desc .= ' within the previous 6 hours';
-    }
+    #my $tstorm_desc = '';
+    #if (exists $col->{T06} and defined $col->{T06}) {
+    #  my ($tstorm, $sev_tstorm) = split('/', $col->{T06});
+    #  if ($tstorm =~ m/\d/) {
+    #    $tstorm_desc = $tstorm . '% chance';
+    #  }
+    #  if ($sev_tstorm =~ m/\d/) {
+    #    $tstorm_desc .= ' (' . $sev_tstorm . '% of which may be severe) ' if $sev_tstorm > 0;
+    #  }
+    #  $tstorm_desc .= ' within the previous 6 hours';
+    #}
 
     if ($params{'timezone'}) {
       $col->{datetime}->set_time_zone($params{'timezone'});
