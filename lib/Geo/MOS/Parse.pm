@@ -182,6 +182,12 @@ sub f_to_c {
   ($_[0] - 32) / 1.8;
 }
 
+sub relative_humidity {
+  my $temp = shift;
+  my $dewp = shift;
+  return int(100*(exp((17.625*$dewp)/(243.04+$dewp))/exp((17.625*$temp)/(243.04+$temp))));
+}
+
 ###############################################################################
 # Getters
 
@@ -243,6 +249,10 @@ sub report {
   push @text, 'Report for ' . $self->{location} . ' generated ' . $self->generation_time->ymd . ' ' . $self->generation_time->hms;  
   foreach my $col ($self->{columns}->@*) {
 
+    if ($col->{TMP} and $col->{DPT}) {
+      $col->{r_humidity} = relative_humidity(f_to_c($col->{TMP}), f_to_c($col->{DPT}));
+    }
+
     my $sky = $CLD_key{$col->{CLD}};
     if ($col->{CLD} ne 'CL') {
       $sky .= ' with bases ' . lc $CIG_key{$col->{CIG}};
@@ -271,12 +281,13 @@ sub report {
     #}
 
     if ($params{'timezone'}) {
-      $col->{datetime}->set_time_zone($params{'timezone'});
+      $col->{datetime_l} = $col->{datetime}->clone->set_time_zone($params{'timezone'});
     }
 
     push @text, uc($col->{datetime}->strftime('%a %b %d at %I:%M %p')) . ":";
     push @text, "\tTemperature: " . $col->{TMP} . '°F';
     push @text, "\tDewpoint:    " . $col->{DPT} . '°F';
+    push @text, "\tR-Humidity:  " . $col->{r_humidity} . '%';
     push @text, "\tSky:         " . $sky;
     push @text, "\tVisibility:  " . $vis;
     push @text, "\tWind:        " . $wind;
